@@ -55,3 +55,11 @@
   (apply values (map/list 2 f ls)))
 
 (provide map2 map/values)
+
+;; Alex Knauth added:
+
+;; curried version of map
+(define ((mapper f) lst1 . lsts)
+  (apply map f lst1 lsts))
+
+(provide mapper)
