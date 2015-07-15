@@ -162,25 +162,42 @@
 ;; groups together elements that are considered equal
 ;; =? should be reflexive, transitive and commutative
 (define (group-by key l [=? equal?])
+
+  ;; like hash-update, but for alists
+  (define (alist-update al k up fail)
+    (let loop ([al al])
+      (cond [(null? al)
+             ;; did not find equivalence class, create one
+             (list (cons k (up '())))]
+            [(=? (car (car al)) k)
+             ;; found the right equivalence class
+             (cons
+              (cons k (up (cdr (car al)))) ; updater takes elements, w/o key
+              (cdr al))]
+            [else ; keep going
+             (cons (car al) (loop (cdr al)))])))
+
+  ;; In cases where `=?` is a built-in equality, can use hash tables instead
+  ;; of lists to compute equivalence classes.
+  (define-values (base update)
+    (cond [(equal? =? eq?)    (values (hasheq)  hash-update)]
+          [(equal? =? eqv?)   (values (hasheqv) hash-update)]
+          [(equal? =? equal?) (values (hash)    hash-update)]
+          [else               (values '()       alist-update)]))
+
   (define classes
-    (for/fold ([res '()]) ; list of lists
-        ([elt (in-list l)])
-      (let loop ([classes     res] ; "zipper" of the equivalence classes
-                 [rev-classes '()])
-        (cond [(null? classes)
-               ;; did not find an equivalence class, create a new one
-               (cons (list elt) res)]
-              [(=? (key elt) (key (car (car classes))))
-               ;; found the equivalence class
-               (append rev-classes ; we keep what we skipped
-                       ;; we extend the current class
-                       (list (cons elt (car classes)))
-                       (cdr classes))] ; and add the rest
-              [else ; keep going
-               (loop (cdr classes)
-                     (cons (car classes) rev-classes))]))))
-  ;; reverse each class, so that group-by is stable
-  (map reverse classes))
+    (for/fold ([res base])
+        ([elt (in-list l)]
+         [idx (in-naturals)]) ; to keep ordering stable
+      (define k (key elt))
+      (define v (cons idx elt))
+      (update res k (lambda (o) (cons v o)) '())))
+  (define sorted-classes
+    (for/list ([(_ c) (in-dict classes)])
+      (sort c < #:key car)))
+  ;; sort classes by order of first appearance, then remove indices
+  (for/list ([c (in-list (sort sorted-classes < #:key caar))])
+    (map cdr c)))
 
 ;; (listof x) ... -> (listof (listof x))
 (define (cartesian-product . ls)
