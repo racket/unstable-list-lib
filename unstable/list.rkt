@@ -5,7 +5,7 @@
          (for-syntax racket/base))
 
 ;; re-export some things from racket/list, for backwards compatibility
-(provide check-duplicate
+(provide (rename-out [check-duplicates check-duplicate])
          group-by
          cartesian-product
          list-update
