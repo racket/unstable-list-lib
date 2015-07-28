@@ -1,7 +1,7 @@
 #lang info
 
 (define collection 'multi)
-(define deps '("base"))
+(define deps '("base" "class-iop-lib"))
 
 (define pkg-desc "Experimental libraries for list operations")
 
